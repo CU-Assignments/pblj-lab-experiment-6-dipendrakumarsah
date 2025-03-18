@@ -4,25 +4,68 @@ To develop a Java program that processes a large dataset of products using Strea
   - Calculate the average price of all products
 
 
-Instruction
-Step 1: Create the Product Class
-- Define a Product class with attributes:
-    name (String)
-    category (String)
-    price (double)
-  
-or (Reads product data from a CSV file)
-For Example: "Laptop", "Electronics", 1200
-             "Phone", "Electronics", 800
+//CODE
+  import java.io.*;
+import java.nio.file.*;
+import java.util.*;
+import java.util.stream.*;
 
+class Product {
+    private String name;
+    private String category;
+    private double price;
 
-Step 2: Create the ProductProcessor Class
-- Create a list of products with multiple categories and prices.
-- Use Streams API to:
-    Group products by category using Collectors.groupingBy().
-    Find the most expensive product in each category using Collectors.maxBy().
-    Calculate the average price of all products using Collectors.averagingDouble().
-- Display the results.
+    public Product(String name, String category, double price) {
+        this.name = name;
+        this.category = category;
+        this.price = price;
+    }
+
+    public String getName() { return name; }
+    public String getCategory() { return category; }
+    public double getPrice() { return price; }
+}
+
+public class ProductProcessor {
+    public static void main(String[] args) {
+        List<Product> products = readProductsFromCSV("products.csv");
+
+        Map<String, List<Product>> groupedByCategory = products.stream()
+                .collect(Collectors.groupingBy(Product::getCategory));
+
+        Map<String, Optional<Product>> mostExpensiveByCategory = products.stream()
+                .collect(Collectors.groupingBy(Product::getCategory,
+                        Collectors.maxBy(Comparator.comparingDouble(Product::getPrice))));
+
+        double averagePrice = products.stream()
+                .collect(Collectors.averagingDouble(Product::getPrice));
+
+        System.out.println("Products grouped by category:");
+        groupedByCategory.forEach((category, productList) -> {
+            System.out.println(category + ": " + productList.stream().map(Product::getName).collect(Collectors.joining(", ")));
+        });
+
+        System.out.println("\nMost Expensive Product in Each Category:");
+        mostExpensiveByCategory.forEach((category, product) ->
+                System.out.println(category + ": " + product.map(Product::getName).orElse("No product")));
+
+        System.out.println("\nAverage Price of All Products: " + averagePrice);
+    }
+
+    private static List<Product> readProductsFromCSV(String fileName) {
+        List<Product> products = new ArrayList<>();
+        try (Stream<String> lines = Files.lines(Paths.get(fileName))) {
+            products = lines.map(line -> line.split(","))
+                    .filter(parts -> parts.length == 3)
+                    .map(parts -> new Product(parts[0].trim(), parts[1].trim(), Double.parseDouble(parts[2].trim())))
+                    .collect(Collectors.toList());
+        } catch (IOException e) {
+            System.out.println("Error reading file: " + e.getMessage());
+        }
+        return products;
+    }
+}
+
 
 
   
